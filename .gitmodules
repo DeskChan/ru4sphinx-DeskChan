@@ -1,0 +1,6 @@
+[submodule "sphinx4"]
+	path = sphinx4
+	url = https://github.com/cmusphinx/sphinx4
+[submodule "ru4sphinx"]
+	path = ru4sphinx
+	url = https://github.com/zamiron/ru4sphinx
