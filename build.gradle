@@ -20,7 +20,7 @@ repositories {
 }
 
 task prepare(type: Copy){
-    from 'ru4sphinx/text2dict' into 'src/main/resources/info/deskchan/sphinxrecognition/g2p/G2PRussian'
+    from 'ru4sphinx/text2dict' into 'src/main/resources/g2p/G2PRussian'
 }
 
 jar {
@@ -37,4 +37,5 @@ task fatJar(type: Jar) {
 dependencies {
     compile group: 'edu.cmu.sphinx', name: 'sphinx4-core', version: '5+'
     compile fileTree(dir: 'libs', include: '*.jar')
+    compile group: 'com.googlecode.juniversalchardet', name: 'juniversalchardet', version: '1+'
 }

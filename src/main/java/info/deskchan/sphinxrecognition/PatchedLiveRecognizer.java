@@ -29,10 +29,9 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer {
     /**
      * Starts recognition process.
      *
-     * @param clear clear cached microphone data
      * @see         edu.cmu.sphinx.api.LiveSpeechRecognizer#stopRecognition()
      */
-    public void startRecognition(boolean clear) {
+    public void startRecognition() {
         recognizer.allocate();
         microphone.startRecording();
     }

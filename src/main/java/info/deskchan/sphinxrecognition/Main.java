@@ -1,134 +1,130 @@
 package info.deskchan.sphinxrecognition;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 
 import edu.cmu.sphinx.api.*;
-import edu.cmu.sphinx.linguist.g2p.G2PConverter;
+import info.deskchan.core.MessageListener;
 import info.deskchan.core.Plugin;
 import info.deskchan.core.PluginProxyInterface;
+import info.deskchan.sphinxrecognition.creator.Dictionary;
+import info.deskchan.sphinxrecognition.creator.LanguageModelCreator;
+import info.deskchan.sphinxrecognition.creator.RussianStatistics;
+import info.deskchan.sphinxrecognition.creator.Statistics;
 
 public class Main implements Plugin{
 
     private static PluginProxyInterface pluginProxy;
 
     private static final String ACOUSTIC_MODEL =
-            "resource:/edu/cmu/sphinx/models/en-us/en-us";
+            "resource:/cmusphinx-ru";
     private static final String DICTIONARY_PATH =
-            "resource:/edu/cmu/sphinx/models/en-us/cmudict-en-us.dict";
+            "resource:/dict.dic";
     private static final String GRAMMAR_PATH =
-            "resource:/info/deskchan/sphinxrecognition/Main/";
-    private static final String LANGUAGE_MODEL =
-            "resource:/info/deskchan/sphinxrecognition/Main/weather.lm";
-
-    private static final Map<String, Integer> DIGITS =
-            new HashMap<String, Integer>();
-
-
-    private static void recognizeWeather(PatchedLiveRecognizer recognizer) {
-        System.out.println("Try some forecast. End with \"the end\"");
-        System.out.println("-------------------------------------");
-        System.out.println("Example: mostly dry some fog patches tonight");
-        System.out.println("Example: sunny spells on wednesday");
-        System.out.println("-------------------------------------");
-
-        recognizer.startRecognition(true);
-        while (true) {
-            String utterance = recognizer.getResult().getHypothesis();
-            if (utterance.equals("the end"))
-                break;
-            else
-                System.out.println(utterance);
-        }
-        recognizer.stopRecognition();
-    }
+            "resource:/lm.lm";
 
     Microphone microphone;
 
     public boolean initialize(PluginProxyInterface ppi){
         pluginProxy = ppi;
 
-        //G2PConverter converter = new G2PConverter("resource:/info/deskchan/sphinxrecognition/g2p/G2PEnglish/");
-        //System.out.println(converter.phoneticize("Hello", 1));
+        pluginProxy.sendMessage("gui:setup-options-submenu", new HashMap<String, Object>(){{
+            List<HashMap<String, Object>> list = new LinkedList<>();
+            list.add(new HashMap<String, Object>() {{
+                put("id", "adapt");
+                put("type", "Button");
+                put("msgTag", "recognition:adapt");
+                put("value", pluginProxy.getString("adapt"));
+            }});
+            put("controls", list);
+        }});
+
+        pluginProxy.addMessageListener("recognition:adapt", new MessageListener() {
+            @Override
+            public void handleMessage(String s, String s1, Object o) {
+                pluginProxy.sendMessage("gui:show-custom-window", new HashMap<String, Object>() {{
+                    List<HashMap<String, Object>> list = new LinkedList<>();
+                    list.add(new HashMap<String, Object>() {{
+                        put("id", "adapt");
+                        put("type", "Button");
+                        put("msgTag", "recognition:adapt");
+                        put("value", pluginProxy.getString("adapt"));
+                    }});
+                    put("controls", list);
+                }});
+            }}
+        );
 
         microphone = new Microphone(16000, 16, true, false);
 
         Configuration configuration = new Configuration();
         configuration.setAcousticModelPath(ACOUSTIC_MODEL);
         configuration.setDictionaryPath(DICTIONARY_PATH);
-        configuration.setGrammarPath(GRAMMAR_PATH);
-        configuration.setUseGrammar(true);
+        configuration.setLanguageModelPath(GRAMMAR_PATH);
 
-        configuration.setGrammarName("dialog");
-        PatchedLiveRecognizer jsgfRecognizer, grxmlRecognizer, lmRecognizer;
-
+        PatchedLiveRecognizer recognizer;
         try {
-            jsgfRecognizer = new PatchedLiveRecognizer(configuration, microphone);
-
-            configuration.setGrammarName("digits.grxml");
-            grxmlRecognizer = new PatchedLiveRecognizer(configuration, microphone);
-
-            configuration.setUseGrammar(false);
-            configuration.setLanguageModelPath(LANGUAGE_MODEL);
-            lmRecognizer = new PatchedLiveRecognizer(configuration, microphone);
-
+            recognizer = new PatchedLiveRecognizer(configuration, microphone);
+            recognizer.startRecognition();
         } catch (Exception e){
             log(e);
             return false;
         }
 
-        jsgfRecognizer.startRecognition(true);
-        while (true) {
-            System.out.println("Choose menu item:");
-            System.out.println("Example: go to the bank account");
-            System.out.println("Example: exit the program");
-            System.out.println("Example: weather forecast");
-            System.out.println("Example: digits\n");
+        int i = 3;
+        while (i > 0) {
+            System.out.println("Say something");
 
-            String utterance = jsgfRecognizer.getResult().getHypothesis();
+            String utterance = recognizer.getResult().getHypothesis();
 
-            if (utterance.startsWith("exit"))
-                break;
-
-            if (utterance.equals("digits")) {
-                jsgfRecognizer.stopRecognition();
-                jsgfRecognizer.startRecognition(true);
-            }
-
-            if (utterance.equals("bank account")) {
-                jsgfRecognizer.stopRecognition();
-                jsgfRecognizer.startRecognition(true);
-            }
-
-            if (utterance.endsWith("weather forecast")) {
-                jsgfRecognizer.stopRecognition();
-                recognizeWeather(lmRecognizer);
-                jsgfRecognizer.startRecognition(true);
-            }
+            System.out.println(utterance);
+            i--;
         }
 
-        jsgfRecognizer.stopRecognition();
         return true;
     }
 
     public static void main(String[] args) throws Exception {
         new Main().initialize(null);
+    }
 
-        DictionaryCreator creator = new RussianDictionaryCreator();
-        creator.download();
+    static void createRussianResources(){
+        RussianStatistics statistics = new RussianStatistics();
+        statistics.download();
+        statistics.save();
+        statistics.resize(15000);
 
+        Dictionary dictionary = new Dictionary(statistics);
+        dictionary.save();
+
+        new LanguageModelCreator().save(statistics);
     }
 
     public static void log(Throwable e){
         //pluginProxy.log(e);
-        System.out.println(e.getMessage() + "\n" + e.getCause() + "\n" + e.getStackTrace());
+        System.out.println(e.getClass().toString() + " " + e.getMessage() + "\n" + e.getCause());
+        e.printStackTrace();
     }
 
     public static PluginProxyInterface getPluginProxy(){ return pluginProxy; }
+
+    public static BufferedReader getFileReader(String filename) throws Exception{
+        try {
+            return new BufferedReader(
+                   new InputStreamReader(
+                   new FileInputStream(pluginProxy.getDataDirPath().resolve(filename).toString()), "UTF-8")
+            );
+        } catch (Exception e) {
+            return new BufferedReader(
+                   new InputStreamReader(Main.class.getClassLoader().getResourceAsStream(filename), "UTF-8")
+            );
+        }
+    }
+
+    public static BufferedWriter getFileWriter(String filename) throws Exception {
+        return new BufferedWriter(
+               new OutputStreamWriter(
+               new FileOutputStream(pluginProxy.getDataDirPath().resolve(filename).toString()), "UTF-8")
+        );
+    }
 }
