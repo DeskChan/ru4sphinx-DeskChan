@@ -23,16 +23,31 @@ task prepare(type: Copy){
     from 'ru4sphinx/text2dict' into 'src/main/resources/g2p/G2PRussian'
 }
 
-jar {
-    manifest.attributes("Main-Class": mainClassName)
-}
 processResources.dependsOn prepare
+
+task copyModel(type: Copy){
+    from 'cmusphinx-ru'
+    into 'build/libs/cmusphinx-ru'
+}
 
 task fatJar(type: Jar) {
     manifest.attributes("Main-Class": mainClassName)
+    manifest {
+        def commonAttrs = [
+                'Main-Class': mainClassName,
+                'Type': 'Jar',
+                'Version': '1.2.8',
+                'Author': 'DeskChan Project <support@deskchan.info> (http://deskchan.info)',
+                'Resources': "info/deskchan/sphinxrecognition/strings"
+        ]
+        attributes commonAttrs
+    }
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
+
+//fatJar.dependsOn copyModel
+
 
 dependencies {
     compile group: 'edu.cmu.sphinx', name: 'sphinx4-core', version: '5+'

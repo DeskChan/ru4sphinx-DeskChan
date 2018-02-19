@@ -103,7 +103,7 @@ public class Statistics {
             String line;
             while ((line = reader.readLine()) != null) {
                 try {
-                    words.add(Word.fromStats(line));
+                    words.add(Word.fromString(line));
                 } catch (Exception e) { }
             }
 

@@ -30,7 +30,6 @@ public class RussianStatistics extends Statistics {
     public static String clearWord(String word){
         StringBuilder sb = new StringBuilder();
         for(int i=0; i<word.length(); i++) {
-            //if (word.charAt(i) == '\n') System.out.println("HI! " + (sb.length() > 0) + " " + (sb.charAt(sb.length() - 1) != ' '));
             if (LETTERS.indexOf(word.charAt(i)) >= 0)
                 sb.append(Character.toLowerCase(word.charAt(i)));
             else if (sb.length() > 0 && sb.charAt(sb.length() - 1) != ' ')

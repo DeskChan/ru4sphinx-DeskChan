@@ -2,6 +2,7 @@ package info.deskchan.sphinxrecognition.creator;
 
 import info.deskchan.sphinxrecognition.Main;
 
+import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 
@@ -53,4 +54,25 @@ public class LanguageModelCreator {
         //Console.WriteLine("Complete writing");
     }
 
+    public static String getModelPath(){
+        return Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toAbsolutePath().toString();
+    }
+
+    public static void checkModel(){
+        if (Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toFile().exists()) return;
+
+        try {
+            BufferedReader reader = Main.getFileReader(FILENAME);
+            BufferedWriter writer = Main.getFileWriter(FILENAME);
+            String line;
+            while ((line = reader.readLine()) != null) {
+                writer.write(line + "\n");
+            }
+
+            reader.close();
+            writer.close();
+        } catch (Exception e){
+            Main.log(e);
+        }
+    }
 }

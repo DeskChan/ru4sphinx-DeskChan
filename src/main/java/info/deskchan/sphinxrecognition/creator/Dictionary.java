@@ -6,6 +6,7 @@ import info.deskchan.sphinxrecognition.g2p.G2PEnglish;
 import info.deskchan.sphinxrecognition.g2p.G2PRussian;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
 
 public class Dictionary {
@@ -14,6 +15,7 @@ public class Dictionary {
     private static final String FILENAME = "dict.dic";
 
     public Dictionary() {
+        words = new LinkedList<>();
         try {
             BufferedReader reader = Main.getFileReader(FILENAME);
             String line;
@@ -22,7 +24,9 @@ public class Dictionary {
                     Word word = Word.fromPronounce(line);
                     word.required = true;
                     words.add(word);
-                } catch (Exception e){ }
+                } catch (Exception e){
+                    Main.log(e);
+                }
             }
 
             reader.close();
@@ -84,4 +88,25 @@ public class Dictionary {
         return words.contains(new Word(word));
     }
 
+    public static String getDictionaryPath(){
+        return Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toAbsolutePath().toString();
+    }
+
+    public static void checkDictionary(){
+        if (Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toFile().exists()) return;
+
+        try {
+            BufferedReader reader = Main.getFileReader(FILENAME);
+            BufferedWriter writer = Main.getFileWriter(FILENAME);
+            String line;
+            while ((line = reader.readLine()) != null) {
+                writer.write(line + "\n");
+            }
+
+            reader.close();
+            writer.close();
+        } catch (Exception e){
+            Main.log(e);
+        }
+    }
 }
