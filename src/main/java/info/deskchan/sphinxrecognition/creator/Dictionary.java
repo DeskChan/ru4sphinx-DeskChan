@@ -6,42 +6,72 @@ import info.deskchan.sphinxrecognition.g2p.G2PEnglish;
 import info.deskchan.sphinxrecognition.g2p.G2PRussian;
 
 import java.io.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
 public class Dictionary {
 
-    protected List<Word> words;
+    public static final int DEFAULT_COUNT = 1500;
+    protected HashList words;
     private static final String FILENAME = "dict.dic";
+    private static final String DEFAULT_WORDS = "default_words.txt";
 
     public Dictionary() {
-        words = new LinkedList<>();
-        try {
-            BufferedReader reader = Main.getFileReader(FILENAME);
-            String line;
-            while ((line = reader.readLine()) != null){
-                try {
-                    Word word = Word.fromPronounce(line);
-                    word.required = true;
-                    words.add(word);
-                } catch (Exception e){
-                    Main.log(e);
-                }
-            }
+        words = new HashList();
 
-            reader.close();
-        } catch (Exception e){
-            Main.log(e);
-        }
+        try {
+            loadDefault(Main.getFileReader(FILENAME), words);
+        } catch (Exception e){ }
     }
 
-    public Dictionary(Statistics stats) {
+    private static void loadDefault(InputStream stream, HashList words) throws Exception{
+        loadDefault(new BufferedReader(
+                new InputStreamReader(stream, "UTF-8")
+        ), words);
+    }
+
+    private static void loadDefault(BufferedReader reader, HashList words) throws Exception{
+        String line;
+        while ((line = reader.readLine()) != null){
+            try {
+                Word word = Word.fromPronounce(line);
+                word.required = true;
+                words.add(word);
+            } catch (Exception e){
+                Main.log(e);
+            }
+        }
+        reader.close();
+    }
+
+    public Dictionary(Statistics stats, int size) {
         words = stats.getWords();
 
-        G2PConvert english = new G2PEnglish(), russian = new G2PRussian();
+        try {
+            loadDefault(new FileInputStream(Main.getPluginProxy().getPluginDirPath().resolve(DEFAULT_WORDS).toString()), words);
+        } catch (Exception e) { }
+        try {
+            loadDefault(Main.class.getClassLoader().getResourceAsStream(DEFAULT_WORDS), words);
+        } catch (Exception e) {
+            Main.log(e);
+        }
 
+        stats.sort();
+        resize(size);
+        addPronounces(words);
+    }
+    private static void addPronounces(HashList words){
+        G2PConvert english = new G2PEnglish(), russian = new G2PRussian();
+        try {
+            english.allocate();
+            russian.allocate();
+        } catch (Exception e){
+            Main.log(e);
+            return;
+        }
         for (Word word : words) {
-            if (word.pronounce != null) continue;
+            if (word.pronounces.size() > 0) continue;
 
             Word.Language lan = word.checkLanguage();
             G2PConvert converter = null;
@@ -62,7 +92,7 @@ public class Dictionary {
                     break;
                 }
             }
-            word.pronounce = converter.convert(word.word);
+            word.pronounces.add(converter.convert(word.word));
         }
     }
 
@@ -76,16 +106,35 @@ public class Dictionary {
         try {
             BufferedWriter writer = Main.getFileWriter(FILENAME);
                 for(Word word : words)
-                   writer.write(word.word + " " + word.pronounce + "\n");
+                   writer.write(word.toPronouncesString());
 
             writer.close();
         } catch (Exception e){
             Main.log(e);
         }
+
+        Main.flushRecognizer();
     }
+
+    public int size(){ return words.size(); }
 
     public boolean contains(String word){
         return words.contains(new Word(word));
+    }
+
+    public void resize(int newSize){
+        while (words.size() > newSize)
+            words.removeLast();
+    }
+
+    public Word get(String word){
+        Iterator<Word> it = words.iterator();
+        while (it.hasNext()){
+            Word w = it.next();
+            if (w.word.equals(word))
+                return w;
+        }
+        return new Word(word);
     }
 
     public static String getDictionaryPath(){
@@ -107,6 +156,43 @@ public class Dictionary {
             writer.close();
         } catch (Exception e){
             Main.log(e);
+        }
+    }
+
+    public static void saveDefaultWords(Collection<String> words){
+        HashList existingWords = new HashList();
+
+        try {
+            loadDefault(new FileInputStream(Main.getPluginProxy().getPluginDirPath().resolve(DEFAULT_WORDS).toString()), existingWords);
+        } catch (Exception e){ }
+
+        int oldSize = existingWords.size();
+        for (String word : words)
+            existingWords.add(Word.fromPronounce(word));
+
+        addPronounces(existingWords);
+        int newSize = existingWords.size();
+        try {
+            BufferedWriter writer = Main.getFileWriter(DEFAULT_WORDS);
+
+            for (Word word : existingWords)
+                writer.write(word.toPronouncesString());
+
+            writer.close();
+        } catch (Exception e){
+            Main.log(e);
+        }
+
+        if (oldSize != newSize) {
+            RussianStatistics statistics = new RussianStatistics();
+            statistics.load();
+
+            Dictionary dictionary = new Dictionary(statistics, Main.getPluginProxy().getProperties().getInteger("dictionary.length", Dictionary.DEFAULT_COUNT));
+            dictionary.save();
+
+            new LanguageModelCreator().save(dictionary);
+
+            Main.flushRecognizer();
         }
     }
 }

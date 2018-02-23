@@ -4,22 +4,24 @@ import edu.cmu.sphinx.linguist.g2p.G2PConverter;
 import edu.cmu.sphinx.linguist.g2p.Path;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 public abstract class G2PConvert {
 
+    boolean euristic = true;
+
     protected String modelName = null;
 
     protected String VOWELS = "aouie";
-    protected List<String[]> replacing = Arrays.asList(
-            new String[]{"ur", "u0"},
-            new String[]{"ae", "i0"},
-            new String[]{"ao", "o0"}
-    );
 
     private G2PConverter converter = null;
+
+    G2PConvert(boolean euristic){
+        this.euristic = euristic;
+    }
+
+    G2PConvert(){}
 
     public void allocate() throws Exception{
         converter = new G2PConverter(
@@ -43,36 +45,44 @@ public abstract class G2PConvert {
         return getPossible(word, 1).iterator().next();
     }
 
+    public List<String> getPossible(String word, int count){
+        StringBuilder sb = new StringBuilder(word.toLowerCase());
+        for (int i = 1; i < sb.length(); i++) if (sb.charAt(i) == sb.charAt(i-1)) { sb.deleteCharAt(i); i--; }
+        word = sb.toString();
 
-    public Collection<String> getPossible(String word, int count){
+        if (euristic) word = translateFirst(word);
+
         ArrayList<String> list = new ArrayList<>();
-        for(Path out : converter.phoneticize(word, count)) {
-            StringBuilder sb = new StringBuilder();
-            for (String letter : out.getPath()) {
-                letter = letter.toLowerCase();
-                for (String[] replacement : replacing){
-                    if (replacement[0].equals(letter)) {
-                        letter = replacement[1];
-                        break;
-                    }
-                }
-                char first = letter.charAt(0);
-                int length = letter.length();
-                boolean same = length == 2 && letter.charAt(0) == letter.charAt(1);
-                if (VOWELS.indexOf(first) >= 0){
-                    letter = first + (same ? "1" : "0");
-                } else if (same){
-                    letter = first + "j";
-                }
-                sb.append(letter);
-                sb.append(" ");
-            }
-            sb.setLength(sb.length() - 1);
-            list.add(word + " " + sb.toString());
+        for(Path out : converter.phoneticize(word, Math.min(5, count * 2))) {
+            String result = convertWord(out);
+            if (result.contains("1") || !result.matches(".*["+VOWELS+"]+.*"))
+                list.add(result);
+            if (list.size() >= count) break;
         }
+        if (list.size() == 0)
+            list.add(convertWord(converter.phoneticize(word, 1).get(0)));
 
         return list;
     }
+
+
+    protected String convertWord(Path out){
+        StringBuilder sb = new StringBuilder(" ");
+        for (String letter : out.getPath()) {
+            if (euristic) sb.append(translateLetter(letter));
+            else sb.append(letter);
+            sb.append(" ");
+        }
+        if (euristic) return translateWord(sb.toString()).trim();
+        else return sb.toString().trim();
+    }
+
+
+    protected abstract String translateLetter(String letter);
+
+    protected abstract String translateWord(String word);
+
+    protected abstract String translateFirst(String word);
 
     public boolean allocated(){
         return converter != null;

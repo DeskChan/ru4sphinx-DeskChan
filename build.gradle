@@ -46,7 +46,7 @@ task fatJar(type: Jar) {
     with jar
 }
 
-//fatJar.dependsOn copyModel
+fatJar.dependsOn copyModel
 
 
 dependencies {

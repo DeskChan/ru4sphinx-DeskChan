@@ -8,81 +8,25 @@ import java.util.*;
 
 public class Statistics {
 
-    LinkedList<Word> words = new LinkedList<>();
+    HashList words = new HashList();
 
     protected static final String STATS_FILENAME = "stats";
     protected int currentText = 0;
-
-    Statistics() {
-        loadDefault();
-        loadCustomPronounces();
-    }
-
-
-    private void loadDefault(){
-        try {
-            words.clear();
-            BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(getClass().getClassLoader().getResourceAsStream("default_words.txt"), "UTF-8")
-            );
-
-            String line;
-            while ((line = reader.readLine()) != null){
-                try {
-                    Word word = new Word(line);
-                    word.required = true;
-                    words.add(word);
-                } catch (Exception e){ }
-            }
-
-            reader.close();
-        } catch (Exception e){
-            Main.log(e);
-        }
-    }
-
-    private static final String PRONOUNCES_FILENAME = "custom";
-
-    private void loadCustomPronounces(){
-        try {
-            BufferedReader reader = Main.getFileReader(PRONOUNCES_FILENAME);
-            String line;
-            while ((line = reader.readLine()) != null) {
-                try {
-                    words.add(Word.fromPronounce(line));
-                } catch (Exception e) { }
-            }
-
-            reader.close();
-        } catch (Exception e){
-            Main.log(e);
-        }
-    }
 
     void add(String word){
         Iterator<Word> it = words.iterator();
         while (it.hasNext()){
             Word next = it.next();
             if (next.word.equals(word)){
-                next.count++;
-                if (next.textIndex != currentText){
-                    next.textsCount++;
-                    next.textIndex = currentText;
-                }
+                next.inc(currentText);
                 return;
             }
         }
-        words.add(new Word(word));
+        words.addNoCheck(new Word(word));
     }
 
     public void sort(){
-        Collections.sort(words);
-    }
-
-    public void resize(int newSize){
-        sort();
-        while (words.size() > newSize)
-            words.removeLast();
+        words.sort();
     }
 
     public void save(){
@@ -103,7 +47,7 @@ public class Statistics {
             String line;
             while ((line = reader.readLine()) != null) {
                 try {
-                    words.add(Word.fromString(line));
+                    words.addNoCheck(Word.fromString(line));
                 } catch (Exception e) { }
             }
 
@@ -129,7 +73,7 @@ public class Statistics {
         }
     }
 
-    List<Word> getWords(){
+    HashList getWords(){
         return words;
     }
 }

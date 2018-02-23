@@ -96,7 +96,7 @@ public class RussianStatistics extends Statistics {
         System.out.println("Clearing completed");
 
         System.out.print("Adding to vocabulary... ");
-        String[] wordsFound = page.code.split("[\\.\\s\\n-]");
+        String[] wordsFound = page.code.split("[\\.\\s\\n-]", -1);
 
         for(int i=0, len = wordsFound.length; i<len; i++){
             if (wordsFound[i].length() == 0) continue;

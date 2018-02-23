@@ -53,6 +53,16 @@ public class Adapter {
             }
         });
 
+        pluginProxy.addMessageListener("recognition:adapt-use-old", new MessageListener() {
+            @Override public void handleMessage(String s, String s1, Object o) {
+                instance = new Adapter(State.TRAINING);
+                pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
+                    put("name", pluginProxy.getString("adaptation"));
+                    put("action", "hide");
+                }});
+            }
+        });
+
         pluginProxy.addMessageListener("recognition:adapt-toggle-record", new MessageListener() {
             @Override public void handleMessage(String s, String s1, Object o) {
                 getInstance().toggleRecording();
@@ -127,7 +137,8 @@ public class Adapter {
             LinkedList<HashMap<String, Object>> list = new LinkedList<>();
             list.add(new HashMap<String, Object>() {{
                 put("type", "Label");
-                put("value", pluginProxy.getString("adaptation-info"));
+                put("value", pluginProxy.getString("what-is-adaptation"));
+                put("width", 350);
             }});
             list.add(new HashMap<String, Object>() {{
                 put("type", "Separator");
@@ -139,9 +150,14 @@ public class Adapter {
             list.add(new HashMap<String, Object>() {{
                 put("id", "adaptation-text");
                 put("type", "TextArea");
-                put("width", 300);
                 put("height", 150);
                 put("value", pluginProxy.getString("adaptation-text"));
+            }});
+            list.add(new HashMap<String, Object>() {{
+                put("id", "use-old-recording");
+                put("type", "Button");
+                put("value", pluginProxy.getString("use-old-recording"));
+                put("msgTag", "recognition:adapt-use-old");
             }});
             put("controls", list);
         }};
@@ -386,7 +402,7 @@ public class Adapter {
         protected TrainingText(String text) throws Exception{
             currentIndex = 0;
             text = RussianStatistics.clearWord(text);
-            String[] words = text.split("[\\n\\s-]");
+            String[] words = text.split("[\\n\\s-]", -1);
             if(words.length == 0)
                 throw new Exception("no-text");
 

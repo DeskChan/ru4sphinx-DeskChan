@@ -5,44 +5,61 @@ import info.deskchan.sphinxrecognition.Main;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
+import java.util.Locale;
 
 public class LanguageModelCreator {
 
     private static final String FILENAME = "lm.lm";
 
-    public void save(Statistics stats){
+    public void save(Dictionary dictionary){
 
-        int len = 0, reqCount = 0;
-        for(Word word : stats.words){
+        Double frequencySum = null;
+        int requiredWordsCount = 0;
+        for(Word word : dictionary.words){
             if(word.required)
-                reqCount++;
-            else
-                len += word.setSqrt();
+                requiredWordsCount++;
+            else {
+                if (frequencySum == null) frequencySum = 0D;
+                frequencySum += word.setSqrt();
+            }
         }
 
-        double fwc = 0, reqNum;
-        if (len > 0){
-            fwc = len * 2 * 10/9;
-            reqNum = Math.log10( (double) len / reqCount / fwc );
+        if (frequencySum == null && requiredWordsCount == 0)
+            throw new RuntimeException("THIS CAN'T BE HAPPENING!");
+
+        double percentage;
+
+
+        if (requiredWordsCount == 0){
+            percentage = 0;
+            requiredWordsCount = 1;
+        } else if (frequencySum == null){
+            percentage = 100;
+            frequencySum = 1D;
         } else {
-            reqNum = Math.log10( (double) 1 / reqCount );
+            if (Main.getPluginProxy() != null)
+                percentage = Main.getPluginProxy().getProperties().getDouble("modelPercentage", 90);
+            else percentage = 90;
         }
+        percentage /= 100;
 
-        System.out.println(fwc + " " + reqCount + " " + (len / reqCount / fwc));
+        double requiredWordWeight = Math.log10(percentage / requiredWordsCount);
+        double commonWordMultiplier = (1 - percentage) / frequencySum;
+
         try {
-            BufferedWriter sw = new BufferedWriter(new FileWriter(FILENAME));
+            BufferedWriter sw = Main.getFileWriter(FILENAME);
             //Console.WriteLine("Open file for writing");
-            sw.write("\n\\data\\\nngram 1=" + stats.words.size() + "\n");
+            sw.write("\n\\data\\\nngram 1=" + dictionary.words.size() + "\n");
             sw.write("\n\n\\1-grams:\n");
 
-            sw.write(String.format("%.4f", Math.log10((fwc-2*len)/fwc))+" <UNK>\n");
+            sw.write("-4.0000 <UNK>\n");
             sw.write("-99.0000 <s>\n");
-            sw.write("-1.0000 </s>\n");
-            for(Word word : stats.words){
+            sw.write("-99.0000 </s>\n");
+            for(Word word : dictionary.words){
                 if(word.required)
-                    sw.write(String.format("%.4f", reqNum));
+                    sw.write(String.format(Locale.US, "%.4f", requiredWordWeight));
                 else
-                    sw.write(String.format("%.4f", Math.log10((double) word.count / fwc)));
+                    sw.write(String.format(Locale.US, "%.4f", Math.log10((double) word.count * commonWordMultiplier)));
                 sw.write(" " + word.word + "\n");
             }
             sw.write("\n\\end\\\n");
