@@ -4,7 +4,6 @@ import info.deskchan.sphinxrecognition.Main;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.util.Locale;
 
 public class LanguageModelCreator {
@@ -76,7 +75,7 @@ public class LanguageModelCreator {
     }
 
     public static void checkModel(){
-        if (Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toFile().exists()) return;
+        if (Main.getPluginProxy() == null || Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toFile().exists()) return;
 
         try {
             BufferedReader reader = Main.getFileReader(FILENAME);

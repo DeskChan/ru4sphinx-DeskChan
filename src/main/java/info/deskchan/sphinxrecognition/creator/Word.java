@@ -68,9 +68,11 @@ public class Word implements Comparable<Word> {
         return sb.toString();
     }
 
-    public void addPronounces(Word other){
+    public boolean addPronounces(Word other){
         if (other.required) required = true;
+        int oldSize = pronounces.size();
         pronounces.addAll(other.pronounces);
+        return oldSize < pronounces.size();
     }
 
     @Override

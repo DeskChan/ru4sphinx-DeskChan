@@ -6,8 +6,6 @@ import info.deskchan.sphinxrecognition.g2p.G2PEnglish;
 import info.deskchan.sphinxrecognition.g2p.G2PRussian;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 
 public class Dictionary {
@@ -142,7 +140,7 @@ public class Dictionary {
     }
 
     public static void checkDictionary(){
-        if (Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toFile().exists()) return;
+        if (Main.getPluginProxy() == null || Main.getPluginProxy().getPluginDirPath().resolve(FILENAME).toFile().exists()) return;
 
         try {
             BufferedReader reader = Main.getFileReader(FILENAME);
@@ -160,22 +158,23 @@ public class Dictionary {
     }
 
     public static void saveDefaultWords(Collection<String> words){
-        HashList existingWords = new HashList();
-
-        try {
-            loadDefault(new FileInputStream(Main.getPluginProxy().getPluginDirPath().resolve(DEFAULT_WORDS).toString()), existingWords);
-        } catch (Exception e){ }
+        HashList existingWords = new Dictionary().words;
+        HashList wordsToSave = new HashList();
 
         int oldSize = existingWords.size();
-        for (String word : words)
-            existingWords.add(Word.fromPronounce(word));
+        for (String text : words) {
+            Word word = Word.fromPronounce(text);
+            if (word != null && existingWords.add(word)) wordsToSave.add(word);
+        }
+
+        int newSize = existingWords.size();
+        if (oldSize == newSize) return;
 
         addPronounces(existingWords);
-        int newSize = existingWords.size();
         try {
             BufferedWriter writer = Main.getFileWriter(DEFAULT_WORDS);
 
-            for (Word word : existingWords)
+            for (Word word : wordsToSave)
                 writer.write(word.toPronouncesString());
 
             writer.close();
@@ -183,16 +182,14 @@ public class Dictionary {
             Main.log(e);
         }
 
-        if (oldSize != newSize) {
-            RussianStatistics statistics = new RussianStatistics();
-            statistics.load();
+        RussianStatistics statistics = new RussianStatistics();
+        statistics.load();
 
-            Dictionary dictionary = new Dictionary(statistics, Main.getPluginProxy().getProperties().getInteger("dictionary.length", Dictionary.DEFAULT_COUNT));
-            dictionary.save();
+        Dictionary dictionary = new Dictionary(statistics, Main.getPluginProxy().getProperties().getInteger("dictionary.length", Dictionary.DEFAULT_COUNT));
+        dictionary.save();
 
-            new LanguageModelCreator().save(dictionary);
+        new LanguageModelCreator().save(dictionary);
 
-            Main.flushRecognizer();
-        }
+        Main.flushRecognizer();
     }
 }

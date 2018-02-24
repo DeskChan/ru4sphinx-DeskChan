@@ -1,20 +1,29 @@
 package info.deskchan.sphinxrecognition;
 
 import edu.cmu.sphinx.api.*;
+import edu.cmu.sphinx.decoder.adaptation.ClusteredDensityFileData;
+import edu.cmu.sphinx.decoder.adaptation.Transform;
 import edu.cmu.sphinx.frontend.util.StreamDataSource;
+import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
 
+import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.Charset;
+import java.util.Locale;
+import java.util.Scanner;
 import java.util.Timer;
-import java.util.TimerTask;
 
-public class PatchedLiveRecognizer extends AbstractSpeechRecognizer {
+public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements Recognizer{
 
     private final ImprovedMicrophone microphone;
     private boolean recordingNow;
-    protected static Charset ENCODING;
+    private Thread listeningThread;
+
     private String cache = null;
     private Timer turnOffTimer = new Timer();
+
+    private SpeechCallback callback;
 
     /**
      * Constructs new live recognition object.
@@ -24,14 +33,15 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer {
      */
     public PatchedLiveRecognizer(Configuration configuration, ImprovedMicrophone microphone) throws IOException
     {
-        super(configuration);
+        super(replaceConfiguration(configuration));
         recordingNow = false;
-        ENCODING = Charset.forName( System.getProperty("os.name").toLowerCase().contains("win") ? "WINDOWS-1251" : "UTF-8" );
-
         this.microphone = microphone;
-        context.getInstance(StreamDataSource.class)
-                .setInputStream(microphone.getStream());
+    }
 
+    private static Configuration replaceConfiguration(Configuration configuration){
+        configuration.setLanguageModelPath("file:\\" + configuration.getLanguageModelPath());
+        configuration.setDictionaryPath("file:\\" + configuration.getDictionaryPath());
+        return configuration;
     }
 
     /**
@@ -40,23 +50,22 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer {
      * @see         edu.cmu.sphinx.api.LiveSpeechRecognizer#stopRecognition()
      */
     public void startRecognition() {
-        recognizer.allocate();
+        try {
+            recognizer.allocate();
+        } catch (Exception e){
+            stopRecognition();
+        }
+        context.getInstance(StreamDataSource.class)
+                .setInputStream(microphone.getStream());
         microphone.startRecording();
-        turnOffTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-            new Thread(new Runnable() {
-                @Override public void run() {
-                    while(true) {
-                        //cache =  getHypothesis();
-                        System.out.println("result: " + getHypothesis());
-                    }
-                    //microphone.stopRecording();
-                    //stopRecognition();
-                }
-            }).start();
+        listeningThread = new Thread(new Runnable() {
+            @Override public void run() {
+                cache = getHypothesis();
+                stopRecognition();
+                callback.run(getHypothesis());
             }
-        }, 1000 * (Main.getPluginProxy() != null ? Main.getPluginProxy().getProperties().getInteger("recordingTimeOut", 5) : 5));
+        });
+        listeningThread.start();
         recordingNow = true;
     }
 
@@ -70,13 +79,30 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer {
     public void stopRecognition() {
         recordingNow = false;
         microphone.stopRecording();
-        recognizer.deallocate();
-        microphone.reset();
-        System.out.println("result: "+getHypothesis());
+        try {
+            if (listeningThread != null && Thread.currentThread() != listeningThread)
+                listeningThread.join();
+            //listeningThread.interrupt();
+        } catch (Exception e){ }
+        try {
+            recognizer.deallocate();
+        } catch (Exception e){ }
+        System.out.println("stopped");
+    }
+
+    public void setCallback(SpeechCallback callback){
+        this.callback = callback;
     }
 
     public boolean isRecording(){
         return recordingNow;
+    }
+
+    public void free(){
+        if (Thread.currentThread() != listeningThread)
+            listeningThread.interrupt();
+        listeningThread = null;
+        stopRecognition();
     }
 
     public String getHypothesis(){
@@ -84,12 +110,72 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer {
         if (cache != null){
             result = cache;
         } else {
-            System.out.println("waiting");
             result = getResult().getHypothesis();
-            result = new String(result.getBytes(ENCODING), Charset.forName("UTF-8"));
+           // result = new String(result.getBytes(Main.ENCODING), Charset.forName("UTF-8"));
         }
         cache = null;
         return result;
+    }
+
+    public void loadTransform(String path, int numClass) throws Exception {
+        clusters = new ClusteredDensityFileData(context.getLoader(), numClass);
+        Transform transform = new PatchedTransform((Sphinx3Loader)context.getLoader(), numClass);
+        transform.load(path);
+        context.getLoader().update(transform, clusters);
+    }
+
+    class PatchedTransform extends Transform {
+        public PatchedTransform(Sphinx3Loader loader, int nrOfClusters) {
+            super(loader, nrOfClusters);
+        }
+
+        public void load(String filePath) throws Exception {
+
+            Scanner input = new Scanner(new File(filePath)).useLocale(Locale.US);
+            int numStreams, nMllrClass;
+
+            nMllrClass = input.nextInt();
+
+            assert nMllrClass == 1;
+
+            numStreams = input.nextInt();
+
+            float[][][][] As = new float[nMllrClass][numStreams][][];
+            float[][][] Bs = new float[nMllrClass][numStreams][];
+
+            for (int i = 0; i < numStreams; i++) {
+                int length = input.nextInt();
+
+                As[0][i] = new float[length][length];
+                Bs[0][i] = new float[length];
+
+                for (int j = 0; j < length; j++) {
+                    for (int k = 0; k < length; k++) {
+                        As[0][i][j][k] = input.nextFloat();
+                    }
+                }
+                for (int j = 0; j < length; j++) {
+                    Bs[0][i][j] = input.nextFloat();
+                }
+                for (int j = 0; j < length; j++) {
+                    // Skip MLLR variance scale
+                    input.nextFloat();
+                }
+            }
+            input.close();
+
+            Field[] a = this.getClass().getSuperclass().getDeclaredFields();
+            for (Field field : a){
+                if (field.getName().equals("As")){
+                    field.setAccessible(true);
+                    field.set(this, As);
+                }
+                if (field.getName().equals("Bs")) {
+                    field.setAccessible(true);
+                    field.set(this, Bs);
+                }
+            }
+        }
     }
 }
 

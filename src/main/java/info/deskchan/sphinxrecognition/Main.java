@@ -2,15 +2,12 @@ package info.deskchan.sphinxrecognition;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
 import edu.cmu.sphinx.api.Configuration;
 import edu.cmu.sphinx.api.LiveSpeechRecognizer;
-import edu.cmu.sphinx.api.SpeechResult;
-import edu.cmu.sphinx.result.Result;
 import info.deskchan.core.MessageListener;
 import info.deskchan.core.Plugin;
 import info.deskchan.core.PluginProxyInterface;
@@ -19,9 +16,6 @@ import info.deskchan.sphinxrecognition.creator.Dictionary;
 import info.deskchan.sphinxrecognition.creator.DictionaryOptions;
 import info.deskchan.sphinxrecognition.creator.LanguageModelCreator;
 import info.deskchan.sphinxrecognition.creator.RussianStatistics;
-import info.deskchan.sphinxrecognition.g2p.G2PConvert;
-import info.deskchan.sphinxrecognition.g2p.G2PEnglish;
-import info.deskchan.sphinxrecognition.g2p.G2PRussian;
 
 public class Main implements Plugin{
 
@@ -29,19 +23,50 @@ public class Main implements Plugin{
 
     private static PluginProxyInterface pluginProxy;
 
+    protected ImprovedMicrophone microphone;
+
     protected static String ACOUSTIC_MODEL =  "cmusphinx-ru";
     protected static String DICTIONARY_PATH = "dict.dic";
-    protected static String GRAMMAR_PATH =    "lm.lm";
+    protected static String GRAMMAR_PATH = "lm.lm";
     protected static int SAMPLE_RATE = 8000;
+    Recognizer recognizer;
 
-    protected ImprovedMicrophone microphone;
-    PatchedLiveRecognizer recognizer;
+    boolean loadingCompleted = false;
 
     final Set<String> words = new HashSet<>();
+
+    Recognizer.SpeechCallback callback = new Recognizer.SpeechCallback() {
+        @Override
+        public void run(String hypothesis) {
+            Map map = new HashMap();
+            map.put("value", hypothesis);
+            pluginProxy.sendMessage("gui:raise-user-balloon", map);
+        }
+    };
 
     public boolean initialize(PluginProxyInterface ppi){
         instance = this;
         pluginProxy = ppi;
+
+        /*Configuration configuration = new Configuration();
+        configuration.setAcousticModelPath("C:\\DeskChan\\ru4sphinx-DeskChan\\" + ACOUSTIC_MODEL);
+        configuration.setDictionaryPath("C:\\DeskChan\\ru4sphinx-DeskChan\\src\\main\\resources\\dict.dic");
+        configuration.setLanguageModelPath("C:\\DeskChan\\ru4sphinx-DeskChan\\src\\main\\resources\\lm.lm");
+        System.out.println("reinit");
+        try {
+            recognizer = new PocketsphinxRecognizer(configuration);
+            recognizer.setCallback(callback);
+
+            Path path = Paths.get(ACOUSTIC_MODEL).resolve("mllr_matrix");
+            if (path.toFile().exists())
+                recognizer.loadTransform(path.toString(), 1);
+
+            recognizer.startRecognition();
+        } catch (Exception e){
+            Main.log(e);
+        }
+       // createRussianResources(1500);
+        return true;*/
 
         microphone = new ImprovedMicrophone(SAMPLE_RATE, 16, true);
 
@@ -50,10 +75,17 @@ public class Main implements Plugin{
         pluginProxy.getProperties().load();
 
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-            put("name", pluginProxy.getString("options"));
-            put("type", "submenu");
+            put("name", pluginProxy.getString("recognition"));
+            put("type", "tab");
             put("action", "set");
             List<HashMap<String, Object>> list = new LinkedList<>();
+            list.add(new HashMap<String, Object>() {{
+                put("id", "recognizer-type");
+                put("type", "ComboBox");
+                put("values", Arrays.asList("sphinx4", "pocketsphinx"));
+                put("value", pluginProxy.getProperties().getString("default-recognizer", "sphinx4").equals("sphinx4") ? 0 : 1);
+                put("msgTag", "recognition:select-recognizer");
+            }});
             list.add(new HashMap<String, Object>() {{
                 put("type", "Button");
                 put("value", pluginProxy.getString("dictionary.settings"));
@@ -80,6 +112,13 @@ public class Main implements Plugin{
                 put("value", pluginProxy.getProperties().getString("sphinxtrain-path", ""));
             }});
             list.add(new HashMap<String, Object>() {{
+                put("id", "pocketsphinx");
+                put("type", "DirectoryField");
+                put("msgTag", "recognition:set-pocketsphinx-path");
+                put("label", pluginProxy.getString("pocketsphinx-path"));
+                put("value", pluginProxy.getProperties().getString("pocketsphinx-path", ""));
+            }});
+            list.add(new HashMap<String, Object>() {{
                 put("id", "adapt");
                 put("type", "Button");
                 put("msgTag", "recognition:adapt");
@@ -88,10 +127,26 @@ public class Main implements Plugin{
             put("controls", list);
         }});
 
+        pluginProxy.addMessageListener("recognition:select-recognizer", new MessageListener() {
+            @Override
+            public void handleMessage(String s, String s1, Object o) {
+                Map map = (Map) o;
+                pluginProxy.getProperties().put("default-recognizer", map.get("value"));
+                flushRecognizer();
+            }
+        });
+
         pluginProxy.addMessageListener("recognition:set-sphinxtrain-path", new MessageListener() {
             @Override
             public void handleMessage(String s, String s1, Object o) {
                 pluginProxy.getProperties().put("sphinxtrain-path", o);
+            }
+        });
+
+        pluginProxy.addMessageListener("recognition:set-pocketsphinx-path", new MessageListener() {
+            @Override
+            public void handleMessage(String s, String s1, Object o) {
+                pluginProxy.getProperties().put("pocketsphinx-path", o);
             }
         });
 
@@ -121,37 +176,24 @@ public class Main implements Plugin{
             }
         });
 
-        pluginProxy.addMessageListener("recognition:stop-listening", new MessageListener() {
-            @Override public void handleMessage(String s, String s1, Object o) {
-                stopRecording();
-            }
-        });
-
-        /* Toggle recognition state: recording/not recording.
-        * Public message
-        * Params: None
-        * Returns: None */
-       pluginProxy.addMessageListener("recognition:toggle-listening", new MessageListener() {
-            @Override public void handleMessage(String s, String s1, Object o) {
-                if (recognizer == null || !recognizer.isRecording())
-                    startRecording();
-                else
-                    stopRecording();
-            }
-        });
-
         pluginProxy.sendMessage("core:add-command", new HashMap(){{
-            put("tag", "recognition:toggle-listening");
+            put("tag", "recognition:start-listening");
         }});
         pluginProxy.sendMessage("core:set-event-link", new HashMap<String, Object>(){{
             put("eventName", "gui:keyboard-handle");
-            put("commandName", "recognition:toggle-listening");
+            put("commandName", "recognition:start-listening");
             put("rule", "F5");
         }});
 
         pluginProxy.addMessageListener("core:update-links:speech:get", new MessageListener() {
             @Override public void handleMessage(String s, String s1, Object data) {
                 extractWordList((List) data);
+            }
+        });
+        pluginProxy.addMessageListener("core-events:loading-complete", new MessageListener() {
+            @Override public void handleMessage(String s, String s1, Object o) {
+                loadingCompleted = true;
+                Dictionary.saveDefaultWords(words);
             }
         });
 
@@ -165,26 +207,32 @@ public class Main implements Plugin{
 
         File file = pluginProxy.getPluginDirPath().resolve(DICTIONARY_PATH).toFile();
         if (file.exists()){
-            configuration.setDictionaryPath("file:///" + file.toString());
+            configuration.setDictionaryPath(file.toString());
         } else {
             configuration.setDictionaryPath("resource:/" + DICTIONARY_PATH);
         }
 
         file = pluginProxy.getPluginDirPath().resolve(GRAMMAR_PATH).toFile();
         if (file.exists()){
-            configuration.setLanguageModelPath("file:///" + file.toString());
+            configuration.setLanguageModelPath(file.toString());
         } else {
             configuration.setLanguageModelPath("resource:/" + GRAMMAR_PATH);
         }
-
         try {
-            PatchedLiveRecognizer recognizer = new PatchedLiveRecognizer(configuration, microphone);
+            switch (pluginProxy.getProperties().getString("default-recognizer", "sphinx4")){
+                case "sphinx4":
+                    recognizer = new PatchedLiveRecognizer(configuration, microphone);
+                    break;
+                case "pocketsphinx":
+                    recognizer = new PocketsphinxRecognizer(configuration);
+                    break;
+            }
+            recognizer.setCallback(callback);
 
             Path path = Paths.get(ACOUSTIC_MODEL).resolve("mllr_matrix");
             if (path.toFile().exists())
-                recognizer.loadTransform("C:/DeskChan/DeskChan/build/launch4j/plugins/ru4sphinx-DeskChan/cmusphinx-ru/mllr_matrix", 1);
+                recognizer.loadTransform(path.toString(), 1);
 
-                recognizer.startRecognition();
         } catch (Exception e){
             Main.log(e);
         }
@@ -192,8 +240,8 @@ public class Main implements Plugin{
 
     public static void flushRecognizer(){
         if (instance.recognizer != null) {
-            instance.recognizer.stopRecognition();
-            instance.recognizer = null;
+            instance.recognizer.free();
+            instance.initRecognizer();
         }
     }
 
@@ -205,25 +253,19 @@ public class Main implements Plugin{
         recognizer.startRecognition();
     }
 
-    public void stopRecording(){
-        recognizer.stopRecognition();
-    }
-
-
     public void extractWordList(List<Map<String, Object>> commandsInfo){
-        HashSet<String> words = new HashSet<>();
         try {
             for (int i = 0; i < commandsInfo.size(); i++) {
                 try {
                     String rule = (String) commandsInfo.get(i).get("rule");
                     if (rule == null || rule.trim().length() == 0) continue;
-                    words.addAll(Arrays.asList(rule.trim().split(" ")));
+                    words.addAll(Arrays.asList(RussianStatistics.clearWord(rule).split(" ")));
                 } catch (Exception e){ }
             }
-
-            Dictionary.saveDefaultWords(words);
-
+            if (loadingCompleted)
+                Dictionary.saveDefaultWords(words);
         } catch (Exception e){
+            Main.log(e);
             Main.getPluginProxy().log("Error while parsing links list");
         }
     }
@@ -233,12 +275,13 @@ public class Main implements Plugin{
         System.out.println("main is done");
     }
 
-    static void createRussianResources(){
+    static void createRussianResources(int size){
         RussianStatistics statistics = new RussianStatistics();
-        statistics.download();
-        statistics.save();
+        //statistics.download();
+        //statistics.save();
+        statistics.load();
 
-        Dictionary dictionary = new Dictionary(statistics, Main.getPluginProxy().getProperties().getInteger("dictionary.length", Dictionary.DEFAULT_COUNT));
+        Dictionary dictionary = new Dictionary(statistics, size);
         dictionary.save();
 
         new LanguageModelCreator().save(dictionary);
@@ -247,6 +290,13 @@ public class Main implements Plugin{
     public static void log(Throwable e){
         pluginProxy.log(e);
         //e.printStackTrace();
+        if (instance.recognizer != null)  instance.recognizer.free();
+    }
+
+    public void unload(){
+        if (recognizer != null)
+            recognizer.free();
+        getPluginProxy().getProperties().save();
     }
 
     public static Path getPluginDirPath(){

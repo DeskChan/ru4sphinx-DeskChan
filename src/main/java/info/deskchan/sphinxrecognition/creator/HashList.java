@@ -11,8 +11,7 @@ public class HashList extends LinkedList<Word> {
         int index = indexOf(o);
         if (index < 0) return super.add(o);
 
-        get(index).addPronounces(o);
-        return true;
+        return get(index).addPronounces(o);
     }
 
     public boolean addNoCheck(Word o) {

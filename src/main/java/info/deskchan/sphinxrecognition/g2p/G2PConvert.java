@@ -59,8 +59,13 @@ public abstract class G2PConvert {
                 list.add(result);
             if (list.size() >= count) break;
         }
-        if (list.size() == 0)
-            list.add(convertWord(converter.phoneticize(word, 1).get(0)));
+        if (list.size() == 0) {
+            try {
+                list.add(convertWord(converter.phoneticize(word, 1).get(0)));
+            } catch (Exception e){
+                System.out.println("|"+word+"|");
+            }
+        }
 
         return list;
     }

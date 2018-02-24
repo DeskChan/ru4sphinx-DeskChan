@@ -48,9 +48,7 @@ public class G2PRussian extends G2PConvert{
         for (String[] replacement : replacing0){
             try {
                 word = word.replaceAll(replacement[0], replacement[1]);
-            } catch (Exception e){
-                System.out.println();
-            }
+            } catch (Exception e){ }
         }
         return word;
     }

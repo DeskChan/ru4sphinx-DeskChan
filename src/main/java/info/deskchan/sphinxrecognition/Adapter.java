@@ -56,10 +56,6 @@ public class Adapter {
         pluginProxy.addMessageListener("recognition:adapt-use-old", new MessageListener() {
             @Override public void handleMessage(String s, String s1, Object o) {
                 instance = new Adapter(State.TRAINING);
-                pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-                    put("name", pluginProxy.getString("adaptation"));
-                    put("action", "hide");
-                }});
             }
         });
 
@@ -71,11 +67,8 @@ public class Adapter {
 
         pluginProxy.addMessageListener("recognition:adapt-cancel", new MessageListener() {
             @Override public void handleMessage(String s, String s1, Object o) {
+                instance.closeAdapter();
                 instance = null;
-                pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-                    put("name", pluginProxy.getString("adaptation"));
-                    put("action", "hide");
-                }});
             }
         });
     }
@@ -309,6 +302,12 @@ public class Adapter {
         }});
     }
 
+    private void closeAdapter(){
+        pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
+            put("name", pluginProxy.getString("adaptation"));
+            put("action", "hide");
+        }});
+    }
 
     void startTraining(){
         Path voicePath = Main.getPluginProxy().getDataDirPath().resolve(VOICE_PATH),
@@ -337,6 +336,7 @@ public class Adapter {
             p.waitFor();
         } catch (Exception e){
             Main.log(e);
+            instance.closeAdapter();
             return;
         }
 
@@ -364,6 +364,7 @@ public class Adapter {
             p.waitFor();
         } catch (Exception e){
             Main.log(e);
+            instance.closeAdapter();
             return;
         }
 
@@ -382,8 +383,8 @@ public class Adapter {
             p.waitFor();
         } catch (Exception e){
             Main.log(e);
-            return;
         }
+        instance.closeAdapter();
     }
 
     protected static class TrainingText extends ArrayList<String> {

@@ -134,7 +134,6 @@
 октябрю
 ноябрю
 декабрю
-день
 дней
 месяц
 месяцев
@@ -159,7 +158,6 @@
 последующий
 этот
 текущий
-до
 после
 перед
 поза
@@ -168,31 +166,25 @@
 завтра
 включительно
 через
-открой
 открыть
 запусти
 запустить
 отладка
 консоль
 дебаг
-поставь
 блокнот
 браузер
 папка
 файл
-компьютер
 документ
 настройки
 макрос
-поставь
 поставить
 запись
 записать
 закрой
 закрыть
-время
 дата
-число
 корзина
 выключи
 выключить
@@ -202,9 +194,7 @@
 пока
 медленно
 человек
-будильник
 браузер
-калькулятор
 2ch d v aa ch
 0chan n u l ch aa n
 youtube j u t uu p
@@ -518,3 +508,43 @@ yandex j aa n d y k s
 адаптацию a d a p t aa c y j u
 перед pp je rr i t
 утро uu t r a
+нибудь nn i b uu dd
+посчитай p a s ch i t aa j
+кубик k uu bb i k
+радио r aa dd i a
+компьютер k a m pp ju tt i r
+случайное s l u ch ja j n y je
+умеешь u mm je sh
+погода p a g oo d a
+опции oo p c y i
+вычисли v yy ch i s ll i
+появись p y ja vv ii ss
+сети ss je tt i
+ответь a t vv je tt
+сколько s k oo ll k a
+времени v rr je mm i nn i
+найди n a j dd ii
+таймер t a j mm je r
+список s pp ii s y k
+забей z a bb je j
+от oo t
+будильник b u dd ii ll nn i k
+калькулятор k y ll k u ll ja t y r
+спрячься s p rr ja ch ss ja
+выключи v yy k ll ju ch i
+что sh t oo
+сгенерируй z gg i nn i rr ii r u j
+скажи s k a zh ii
+переведи pp i rr i vv i dd ii
+выбери v yy bb i rr i
+перезагрузи pp i rr i z y g r u zz ii
+время v rr je mm ja
+интернет i n tt i r nn je t
+открой a t k r oo j
+команд k a m aa n t
+секундомер ss i k u n d a mm je r
+какой k a k oo j
+поставь p a s t aa ff
+какое k a k oo je
+из i s
+будет b uu dd i t
