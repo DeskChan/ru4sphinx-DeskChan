@@ -25,11 +25,6 @@ task prepare(type: Copy){
 
 processResources.dependsOn prepare
 
-task copyModel(type: Copy){
-    from 'cmusphinx-ru'
-    into 'build/libs/cmusphinx-ru'
-}
-
 task fatJar(type: Jar) {
     manifest.attributes("Main-Class": mainClassName)
     manifest {
@@ -45,8 +40,6 @@ task fatJar(type: Jar) {
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
     with jar
 }
-
-fatJar.dependsOn copyModel
 
 
 dependencies {
