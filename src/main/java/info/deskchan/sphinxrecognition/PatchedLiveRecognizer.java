@@ -38,7 +38,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
     }
 
     private static String addPrefix(String text){
-        return (text.charAt(0) == '/' || text.charAt(0) == '\\') ? "" : "file:\\";
+        return ((text.charAt(0) == '/' || text.charAt(0) == '\\') ? "" : "file:\\") + text;
     }
     private static Configuration replaceConfiguration(Configuration configuration){
         configuration.setAcousticModelPath(addPrefix(configuration.getAcousticModelPath()));
