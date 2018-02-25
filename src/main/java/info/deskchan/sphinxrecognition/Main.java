@@ -249,7 +249,7 @@ public class Main implements Plugin{
     public void startRecording(){
         if (recognizer == null)
             initRecognizer();
-        if (recognizer != null){
+        if (recognizer == null){
             pluginProxy.sendMessage("DeskChan:say", "Я не могу заставить распознаватель работать.");
         } else {
             if (recognizer.startRecognition())
