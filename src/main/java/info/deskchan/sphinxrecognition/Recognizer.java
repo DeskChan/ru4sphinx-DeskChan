@@ -2,7 +2,7 @@ package info.deskchan.sphinxrecognition;
 
 public interface Recognizer {
 
-    void startRecognition();
+    boolean startRecognition();
 
     boolean isRecording();
 

@@ -1,17 +1,15 @@
 package info.deskchan.sphinxrecognition;
 
 import edu.cmu.sphinx.api.Configuration;
-import edu.cmu.sphinx.linguist.language.ngram.LanguageModel;
 import info.deskchan.sphinxrecognition.creator.Dictionary;
 import info.deskchan.sphinxrecognition.creator.LanguageModelCreator;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class PocketsphinxRecognizer implements Recognizer{
+public class PocketsphinxRecognizer implements Recognizer {
 
     Configuration configuration;
     Process recognizerProcess = null;
@@ -25,12 +23,16 @@ public class PocketsphinxRecognizer implements Recognizer{
         this.configuration = configuration;
     }
 
-    void startProcess(){
+    boolean startProcess(){
         Dictionary.checkDictionary();
         LanguageModelCreator.checkModel();
 
         ArrayList<String> arguments = new ArrayList<>();
         if (Main.getPluginProxy() != null) {
+            if (Main.getPluginProxy().getProperties().getString("pocketsphinx-path") == null){
+                Main.log(new Exception("Pocketsphinx path is not setted"));
+                return false;
+            }
             arguments.addAll(Arrays.asList(
                     Main.getPluginProxy().getProperties().getString("pocketsphinx-path") + "\\pocketsphinx_continuous",
                     "-samprate", Integer.toString(Main.SAMPLE_RATE),
@@ -78,6 +80,11 @@ public class PocketsphinxRecognizer implements Recognizer{
         builder.redirectErrorStream(false);
         try {
             recognizerProcess = builder.start();
+        } catch (Exception e) {
+            Main.log(e);
+            return false;
+        }
+        try {
             reader = new BufferedReader(new InputStreamReader(recognizerProcess.getInputStream()));
             writer = new BufferedWriter(new OutputStreamWriter(recognizerProcess.getOutputStream()));
             String line;
@@ -88,30 +95,36 @@ public class PocketsphinxRecognizer implements Recognizer{
                // System.out.println(line);
         } catch (Exception e){
             Main.log(e);
-            return;
+            return false;
         }
+        return true;
     }
 
     public void free(){ recognizerProcess.destroy(); }
 
-    public void startRecognition(){
+    public boolean startRecognition(){
         if (recognizerProcess == null)
-            startProcess();
+            if (!startProcess())
+                return false;
         try {
             writer.write("start\n");
             writer.flush();
         } catch (Exception e){
             Main.log(e);
-            return;
+            return false;
         }
         new Thread(new Runnable() {
             @Override public void run() {
                 cache = getHypothesis();
+                try {
+                    cache = new String(cache.getBytes("WINDOWS-1251"), "UTF-8");
+                } catch (Exception e){ }
                 recordingNow = false;
                 callback.run(getHypothesis());
             }
         }).start();
         recordingNow = true;
+        return true;
     }
 
     @Override

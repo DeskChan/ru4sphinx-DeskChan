@@ -76,14 +76,15 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
         }
     }
 
-    public void startRecognition() {
-        if (recordingState > 0) return;
+    public boolean startRecognition() {
+        if (recordingState > 0) return false;
         recordingState = 0;
         if (recognizer.getState() != edu.cmu.sphinx.recognizer.Recognizer.State.DEALLOCATED){
             stopRecognition();
         } else {
             recognizer.allocate();
         }
+        return true;
     }
 
     public void stopRecognition() {
@@ -193,7 +194,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
     }
 
     private static String addPrefix(String text){
-        return ((text.charAt(0) == '/' || text.charAt(0) == '\\') ? "" : "file:\\") + text;
+        return ((text.charAt(0) == '/' || text.charAt(0) == '\\' || text.startsWith("resource:")) ? "" : "file:\\") + text;
     }
     private static Configuration replaceConfiguration(Configuration configuration){
         configuration.setAcousticModelPath(addPrefix(configuration.getAcousticModelPath()));

@@ -249,9 +249,13 @@ public class Main implements Plugin{
     public void startRecording(){
         if (recognizer == null)
             initRecognizer();
+        if (recognizer != null){
+            pluginProxy.sendMessage("DeskChan:say", "Я не могу заставить распознаватель работать.");
+        } else {
+            if (recognizer.startRecognition())
+                pluginProxy.sendMessage("DeskChan:say", "Говори.");
+        }
 
-        pluginProxy.sendMessage("DeskChan:say", "Говори.");
-        recognizer.startRecognition();
     }
 
     public void extractWordList(List<Map<String, Object>> commandsInfo){
