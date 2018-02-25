@@ -63,6 +63,12 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
         microphone.startRecording();
         listeningThread = new Thread(new Runnable() {
             @Override public void run() {
+                if (recordingNow) return;
+                if (recognizer.getState() == edu.cmu.sphinx.recognizer.Recognizer.State.ALLOCATING) {
+                    Main.log(new Exception("Unknown error"));
+                    return;
+                }
+                recordingNow = true;
                 cache = getHypothesis();
                 stopRecognition();
                 if (cache != null)
@@ -70,7 +76,6 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
             }
         });
         listeningThread.start();
-        recordingNow = true;
     }
 
     /**
