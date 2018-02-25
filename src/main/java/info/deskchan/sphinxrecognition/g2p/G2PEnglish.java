@@ -81,6 +81,6 @@ public class G2PEnglish extends G2PConvert {
         for (String[] replacement : replacing2){
             word = word.replaceAll(replacement[0], replacement[1]);
         }
-        return word.trim();
+        return translateWord(word);
     }
 }

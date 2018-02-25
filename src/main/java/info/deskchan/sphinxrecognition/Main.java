@@ -38,6 +38,7 @@ public class Main implements Plugin{
     Recognizer.SpeechCallback callback = new Recognizer.SpeechCallback() {
         @Override
         public void run(String hypothesis) {
+            System.out.println(hypothesis);
             Map map = new HashMap();
             map.put("value", hypothesis);
             pluginProxy.sendMessage("gui:raise-user-balloon", map);

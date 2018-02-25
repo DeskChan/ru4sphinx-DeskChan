@@ -5,6 +5,9 @@ import edu.cmu.sphinx.decoder.adaptation.ClusteredDensityFileData;
 import edu.cmu.sphinx.decoder.adaptation.Transform;
 import edu.cmu.sphinx.frontend.util.StreamDataSource;
 import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
+import edu.cmu.sphinx.recognizer.StateListener;
+import edu.cmu.sphinx.util.props.PropertyException;
+import edu.cmu.sphinx.util.props.PropertySheet;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,7 +19,7 @@ import java.util.Timer;
 public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements Recognizer{
 
     private final ImprovedMicrophone microphone;
-    private boolean recordingNow;
+    private int recordingState;
     private Thread listeningThread;
 
     private String cache = null;
@@ -30,63 +33,61 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
      * @param configuration common configuration
      * @throws IOException if model IO went wrong
      */
-    public PatchedLiveRecognizer(Configuration configuration, ImprovedMicrophone microphone) throws IOException
+    public PatchedLiveRecognizer(Configuration configuration, ImprovedMicrophone micro) throws IOException
     {
         super(replaceConfiguration(configuration));
-        recordingNow = false;
-        this.microphone = microphone;
-    }
-
-    private static String addPrefix(String text){
-        return ((text.charAt(0) == '/' || text.charAt(0) == '\\') ? "" : "file:\\") + text;
-    }
-    private static Configuration replaceConfiguration(Configuration configuration){
-        configuration.setAcousticModelPath(addPrefix(configuration.getAcousticModelPath()));
-        configuration.setLanguageModelPath(addPrefix(configuration.getLanguageModelPath()));
-        configuration.setDictionaryPath(addPrefix(configuration.getDictionaryPath()));
-        return configuration;
-    }
-
-    /**
-     * Starts recognition process.
-     *
-     * @see         edu.cmu.sphinx.api.LiveSpeechRecognizer#stopRecognition()
-     */
-    public void startRecognition() {
-        try {
-            recognizer.allocate();
-        } catch (Exception e){
-            stopRecognition();
-        }
-        context.getInstance(StreamDataSource.class)
-                .setInputStream(microphone.getStream());
-        microphone.startRecording();
-        listeningThread = new Thread(new Runnable() {
-            @Override public void run() {
-                if (recordingNow) return;
-                if (recognizer.getState() == edu.cmu.sphinx.recognizer.Recognizer.State.ALLOCATING) {
-                    Main.log(new Exception("Unknown error"));
-                    return;
-                }
-                recordingNow = true;
-                cache = getHypothesis();
-                stopRecognition();
-                if (cache != null)
-                    callback.run(cache);
+        recordingState = 0;
+        microphone = micro;
+        recognizer.addStateListener(new StateListener() {
+            @Override
+            public void statusChanged(edu.cmu.sphinx.recognizer.Recognizer.State status) {
+                recognizerStatusChanged(status);
             }
+
+            @Override
+            public void newProperties(PropertySheet ps) throws PropertyException { }
         });
-        listeningThread.start();
     }
 
-    /**
-     * Stops recognition process.
-     *
-     * Recognition process is paused until the next call to startRecognition.
-     *
-     * @see edu.cmu.sphinx.api.LiveSpeechRecognizer#startRecognition(boolean)
-     */
+    private void recognizerStatusChanged(edu.cmu.sphinx.recognizer.Recognizer.State state){
+        switch (state){
+            case DEALLOCATED:{
+                if (recordingState == 0)
+                    recognizer.allocate();
+            } break;
+            case READY:{
+                if (recordingState > 0) return;
+                context.getInstance(StreamDataSource.class)
+                        .setInputStream(microphone.getStream());
+                recordingState = 1;
+                microphone.startRecording();
+                listeningThread = new Thread(new Runnable() {
+                    @Override public void run() {
+                        recordingState = 2;
+                        cache = getHypothesis();
+                        stopRecognition();
+                        if (cache != null)
+                            callback.run(getHypothesis());
+                    }
+                });
+                listeningThread.start();
+            } break;
+            default: System.out.println(state); break;
+        }
+    }
+
+    public void startRecognition() {
+        if (recordingState > 0) return;
+        recordingState = 0;
+        if (recognizer.getState() != edu.cmu.sphinx.recognizer.Recognizer.State.DEALLOCATED){
+            stopRecognition();
+        } else {
+            recognizer.allocate();
+        }
+    }
+
     public void stopRecognition() {
-        recordingNow = false;
+        System.out.println("need to stop");
         microphone.stopRecording();
         try {
             if (listeningThread != null && Thread.currentThread() != listeningThread)
@@ -96,6 +97,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
         try {
             recognizer.deallocate();
         } catch (Exception e){ }
+        recordingState = 0;
         System.out.println("stopped");
     }
 
@@ -104,7 +106,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
     }
 
     public boolean isRecording(){
-        return recordingNow;
+        return recordingState > 0;
     }
 
     public void free(){
@@ -112,6 +114,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
             listeningThread.interrupt();
         listeningThread = null;
         stopRecognition();
+        recordingState = 0;
     }
 
     public String getHypothesis(){
@@ -119,7 +122,9 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
         if (cache != null){
             result = cache;
         } else {
+            System.out.println("waiting");
             result = getResult().getHypothesis();
+            System.out.println("got");
            // result = new String(result.getBytes(Main.ENCODING), Charset.forName("UTF-8"));
         }
         cache = null;
@@ -185,6 +190,16 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
                 }
             }
         }
+    }
+
+    private static String addPrefix(String text){
+        return ((text.charAt(0) == '/' || text.charAt(0) == '\\') ? "" : "file:\\") + text;
+    }
+    private static Configuration replaceConfiguration(Configuration configuration){
+        configuration.setAcousticModelPath(addPrefix(configuration.getAcousticModelPath()));
+        configuration.setLanguageModelPath(addPrefix(configuration.getLanguageModelPath()));
+        configuration.setDictionaryPath(addPrefix(configuration.getDictionaryPath()));
+        return configuration;
     }
 }
 

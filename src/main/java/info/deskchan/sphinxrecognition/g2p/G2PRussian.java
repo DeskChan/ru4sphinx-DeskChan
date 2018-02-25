@@ -98,6 +98,6 @@ public class G2PRussian extends G2PConvert{
         matcher = pattern2.matcher(word);
         word = matcher.replaceAll("$1 j$2 ");
 
-        return word;
+        return word.trim();
     }
 }

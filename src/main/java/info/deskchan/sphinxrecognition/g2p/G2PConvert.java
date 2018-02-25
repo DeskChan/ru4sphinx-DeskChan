@@ -74,6 +74,7 @@ public abstract class G2PConvert {
     protected String convertWord(Path out){
         StringBuilder sb = new StringBuilder(" ");
         for (String letter : out.getPath()) {
+            letter = letter.toLowerCase();
             if (euristic) sb.append(translateLetter(letter));
             else sb.append(letter);
             sb.append(" ");

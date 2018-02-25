@@ -54,7 +54,14 @@ public class PocketsphinxRecognizer implements Recognizer{
                 "-backtrace", "yes",
                 "-logfn", "log.txt"
             ));
+        } else {
+            arguments.addAll( Arrays.asList(
+                "-logfn", System.getProperty("os.name").toLowerCase().contains("win") ? "nul" : "/dev/null"
+            ));
         }
+
+        //for (String arg : arguments) System.out.print(arg + " " );
+        //System.out.println();
 
         Path model = new File(configuration.getAcousticModelPath()).toPath();
         if (model.resolve("tmat_counts").toFile().exists()) {
@@ -74,7 +81,10 @@ public class PocketsphinxRecognizer implements Recognizer{
             reader = new BufferedReader(new InputStreamReader(recognizerProcess.getInputStream()));
             writer = new BufferedWriter(new OutputStreamWriter(recognizerProcess.getOutputStream()));
             String line;
-            while ((line = reader.readLine()) != null && !line.equals("ready"));
+            int seen = 0;
+            while ((line = reader.readLine()) != null && seen < 2) {
+                if (line.equals("ready") || line.startsWith("Allocating")) seen++;
+            }
                // System.out.println(line);
         } catch (Exception e){
             Main.log(e);
