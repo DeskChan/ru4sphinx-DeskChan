@@ -9,7 +9,6 @@ import edu.cmu.sphinx.linguist.acoustic.tiedstate.Sphinx3Loader;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.nio.charset.Charset;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.Timer;
@@ -38,10 +37,13 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
         this.microphone = microphone;
     }
 
+    private static String addPrefix(String text){
+        return (text.charAt(0) == '/' || text.charAt(0) == '\\') ? "" : "file:\\";
+    }
     private static Configuration replaceConfiguration(Configuration configuration){
-        configuration.setAcousticModelPath("file:\\" + configuration.getAcousticModelPath());
-        configuration.setLanguageModelPath("file:\\" + configuration.getLanguageModelPath());
-        configuration.setDictionaryPath("file:\\" + configuration.getDictionaryPath());
+        configuration.setAcousticModelPath(addPrefix(configuration.getAcousticModelPath()));
+        configuration.setLanguageModelPath(addPrefix(configuration.getLanguageModelPath()));
+        configuration.setDictionaryPath(addPrefix(configuration.getDictionaryPath()));
         return configuration;
     }
 
@@ -63,7 +65,8 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
             @Override public void run() {
                 cache = getHypothesis();
                 stopRecognition();
-                callback.run(getHypothesis());
+                if (cache != null)
+                    callback.run(cache);
             }
         });
         listeningThread.start();
