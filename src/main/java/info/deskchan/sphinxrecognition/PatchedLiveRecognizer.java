@@ -39,6 +39,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
     }
 
     private static Configuration replaceConfiguration(Configuration configuration){
+        configuration.setAcousticModelPath("file:\\" + configuration.getAcousticModelPath());
         configuration.setLanguageModelPath("file:\\" + configuration.getLanguageModelPath());
         configuration.setDictionaryPath("file:\\" + configuration.getDictionaryPath());
         return configuration;
@@ -81,7 +82,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
         microphone.stopRecording();
         try {
             if (listeningThread != null && Thread.currentThread() != listeningThread)
-                listeningThread.join();
+                listeningThread.interrupt();
             //listeningThread.interrupt();
         } catch (Exception e){ }
         try {
