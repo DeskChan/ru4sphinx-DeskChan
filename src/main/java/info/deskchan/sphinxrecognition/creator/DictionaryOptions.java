@@ -56,6 +56,7 @@ public class DictionaryOptions {
                         put("type", "TextField");
                         put("label", pluginProxy.getString("word"));
                         put("enterTag", "recognition:dictionary-changed-input-word");
+                        put("onFocusLostTag", "recognition:dictionary-changed-input-word");
                     }});
                     final List<HashMap<String, Object>> subelements = new LinkedList<>();
                     subelements.add(new HashMap<String, Object>() {{

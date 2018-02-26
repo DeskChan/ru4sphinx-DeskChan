@@ -302,6 +302,8 @@ public class Main implements Plugin{
         if (recognizer != null)
             recognizer.free();
         getPluginProxy().getProperties().save();
+        microphone.free();
+        microphone = null;
     }
 
     public static Path getPluginDirPath(){

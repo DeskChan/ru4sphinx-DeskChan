@@ -52,13 +52,18 @@ public class ImprovedMicrophone {
     }
 
     public void stopRecording(){
+        free();
+        reset();
+    }
+
+    public void free(){
         line.stop();
+        line.close();
         try {
             inputStream.close();
         } catch (Exception e){
             Main.log(e);
         }
-        reset();
     }
 
     public InputStream getStream(){
