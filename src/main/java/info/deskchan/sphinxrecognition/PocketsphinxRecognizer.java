@@ -101,7 +101,7 @@ public class PocketsphinxRecognizer implements Recognizer {
         return true;
     }
 
-    public void free(){ recognizerProcess.destroy(); }
+    public void free(){ if (recognizerProcess != null) try { recognizerProcess.destroy(); } catch (Exception e){ } }
 
     public boolean startRecognition(){
         if (recognizerProcess == null)

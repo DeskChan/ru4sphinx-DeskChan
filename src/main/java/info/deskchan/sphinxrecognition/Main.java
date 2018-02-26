@@ -314,9 +314,9 @@ public class Main implements Plugin{
     }
 
     public static void log(Throwable e){
-        //pluginProxy.log(e);
-        e.printStackTrace();
-        if (instance.recognizer != null)  instance.recognizer.free();
+        pluginProxy.log(e);
+        //e.printStackTrace();
+        if (instance != null && instance.recognizer != null)  instance.recognizer.free();
     }
 
     public void unload(){

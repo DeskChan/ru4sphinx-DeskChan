@@ -25,7 +25,7 @@ public class ImprovedMicrophone {
             line = AudioSystem.getTargetDataLine(format);
             line.open();
         } catch (LineUnavailableException e) {
-            throw new IllegalStateException(e);
+            throw new RuntimeException("Microphone is blocked by another process or thread. Maybe it's because you currently use program which uses micro. Or programmer is a dumbhead that can't write programs without bugs", e);
         }
         inputStream = new AudioInputStream(line);
     }
@@ -59,6 +59,7 @@ public class ImprovedMicrophone {
     public void free(){
         line.stop();
         line.close();
+        line.flush();
         try {
             inputStream.close();
         } catch (Exception e){
