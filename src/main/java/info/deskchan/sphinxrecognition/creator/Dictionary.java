@@ -10,7 +10,7 @@ import java.util.*;
 
 public class Dictionary {
 
-    public static final int DEFAULT_COUNT = 1500;
+    public static final int DEFAULT_COUNT = 600;
     protected HashList words;
     private static final String FILENAME = "dict.dic";
     private static final String DEFAULT_WORDS = "default_words.txt";

@@ -5,6 +5,7 @@ import info.deskchan.sphinxrecognition.creator.Dictionary;
 import info.deskchan.sphinxrecognition.creator.LanguageModelCreator;
 
 import java.io.*;
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,9 +117,6 @@ public class PocketsphinxRecognizer implements Recognizer {
         new Thread(new Runnable() {
             @Override public void run() {
                 cache = getHypothesis();
-                try {
-                    cache = new String(cache.getBytes("WINDOWS-1251"), "UTF-8");
-                } catch (Exception e){ }
                 recordingNow = false;
                 callback.run(getHypothesis());
             }
@@ -145,6 +143,10 @@ public class PocketsphinxRecognizer implements Recognizer {
                 result = reader.readLine();
                 while (reader.ready())
                     result += " " +reader.readLine();
+                try {
+                    if (Main.getPluginProxy().getProperties().getBoolean("encode", false))
+                        result = Main.convertEncoding(result);
+                } catch (Exception e){}
             } catch (Exception e){
                 Main.log(e);
                 result = null;

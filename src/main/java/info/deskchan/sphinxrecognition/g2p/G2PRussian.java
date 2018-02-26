@@ -32,16 +32,9 @@ public class G2PRussian extends G2PConvert{
        //     new String[]{"ae", "i0"},
        //     new String[]{"ao", "o0"}
             new String[]{"ur", "u"},
-            new String[]{"ae", "i"},
+            new String[]{"ae", "e"},
             new String[]{"ao", "o"},
-            new String[]{"ay", "y"},
             new String[]{"ji", "ii"}
-    );
-
-    protected List<String[]> replacing2 = Arrays.asList(
-            new String[]{"l ll", "l"},
-            new String[]{"y e", "y i"},
-            new String[]{"e", "y"}
     );
 
     protected String translateFirst(String word){
@@ -52,7 +45,6 @@ public class G2PRussian extends G2PConvert{
         }
         return word;
     }
-    Pattern pattern0 = Pattern.compile("([аеиуо])j (["+VOWELS+"]) ");
     protected String translateLetter(String letter){
         for (String[] replacement : replacing1){
             if (replacement[0].equals(letter)) {
@@ -74,30 +66,5 @@ public class G2PRussian extends G2PConvert{
             letter = first + "j";
         }*/
         return letter.trim();
-    }
-
-    Pattern pattern1 = Pattern.compile("([^\\s"+VOWELS+"])j (["+VOWELS+"]) ");
-    Pattern pattern2 = Pattern.compile("([^\\s"+VOWELS+"]{2}) ([eauo])([eauo]?) ");
-    Pattern pattern3 = Pattern.compile("([^\\s"+VOWELS+"]{2}) (e) ");
-    Pattern pattern4 = Pattern.compile(" j ([eauo])([eauo]?) ");
-    Matcher matcher;
-    protected String translateWord(String word){
-        matcher = pattern1.matcher(word);
-        word = matcher.replaceAll("$1$1 j$2");
-
-        matcher = pattern3.matcher(word);
-        word = matcher.replaceAll("$1 i ");
-
-        matcher = pattern4.matcher(word);
-        word = matcher.replaceAll(" j$1 ");
-
-        for (String[] replacement : replacing2){
-            word = word.replaceAll(" " + replacement[0] + " ", " " + replacement[1] + " ");
-        }
-
-        matcher = pattern2.matcher(word);
-        word = matcher.replaceAll("$1 j$2 ");
-
-        return word.trim();
     }
 }

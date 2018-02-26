@@ -58,13 +58,11 @@ public class G2PEnglish extends G2PConvert {
             new String[]{"uh", "u"},
 
             new String[]{"ng", "n"},
-            new String[]{"jh", "dd zh"}
+            new String[]{"jh", "dd zh"},
+
+            new String[]{"y", "j"}
     );
 
-    protected List<String[]> replacing2 = Arrays.asList(
-            new String[]{"y(\\s|$)", "j "},
-            new String[]{"w", "v"}
-    );
     protected String translateFirst(String word){
         return word;
     }
@@ -76,11 +74,5 @@ public class G2PEnglish extends G2PConvert {
             }
         }
         return letter;
-    }
-    protected String translateWord(String word){
-        for (String[] replacement : replacing2){
-            word = word.replaceAll(replacement[0], replacement[1]);
-        }
-        return translateWord(word);
     }
 }

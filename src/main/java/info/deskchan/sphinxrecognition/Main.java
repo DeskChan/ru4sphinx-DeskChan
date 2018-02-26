@@ -49,26 +49,6 @@ public class Main implements Plugin{
         instance = this;
         pluginProxy = ppi;
 
-        /*Configuration configuration = new Configuration();
-        configuration.setAcousticModelPath("C:\\DeskChan\\ru4sphinx-DeskChan\\" + ACOUSTIC_MODEL);
-        configuration.setDictionaryPath("C:\\DeskChan\\ru4sphinx-DeskChan\\src\\main\\resources\\dict.dic");
-        configuration.setLanguageModelPath("C:\\DeskChan\\ru4sphinx-DeskChan\\src\\main\\resources\\lm.lm");
-        System.out.println("reinit");
-        try {
-            recognizer = new PocketsphinxRecognizer(configuration);
-            recognizer.setCallback(callback);
-
-            Path path = Paths.get(ACOUSTIC_MODEL).resolve("mllr_matrix");
-            if (path.toFile().exists())
-                recognizer.loadTransform(path.toString(), 1);
-
-            recognizer.startRecognition();
-        } catch (Exception e){
-            Main.log(e);
-        }
-       // createRussianResources(1500);
-        return true;*/
-
         microphone = new ImprovedMicrophone(SAMPLE_RATE, 16, true);
 
         ACOUSTIC_MODEL = pluginProxy.getPluginDirPath().resolve(ACOUSTIC_MODEL).toString();
@@ -84,7 +64,7 @@ public class Main implements Plugin{
                 put("id", "recognizer-type");
                 put("type", "ComboBox");
                 put("values", Arrays.asList("sphinx4", "pocketsphinx"));
-                put("value", pluginProxy.getProperties().getString("default-recognizer", "sphinx4").equals("sphinx4") ? 0 : 1);
+                put("value", pluginProxy.getProperties().getString("default-recognizer", "pocketsphinx").equals("sphinx4") ? 0 : 1);
                 put("msgTag", "recognition:select-recognizer");
             }});
             list.add(new HashMap<String, Object>() {{
@@ -97,6 +77,13 @@ public class Main implements Plugin{
                 put("type", "Button");
                 put("msgTag", "recognition:rescan-plugins");
                 put("value", pluginProxy.getString("rescan"));
+            }});
+            list.add(new HashMap<String, Object>() {{
+                put("id", "encode");
+                put("type", "CheckBox");
+                put("label", pluginProxy.getString("encode"));
+                put("value", pluginProxy.getProperties().getBoolean("encode"));
+                put("msgTag", "recognition:toggle-encoding");
             }});
             list.add(new HashMap<String, Object>() {{
                 put("type", "Separator");
@@ -134,6 +121,13 @@ public class Main implements Plugin{
                 Map map = (Map) o;
                 pluginProxy.getProperties().put("default-recognizer", map.get("value"));
                 flushRecognizer();
+            }
+        });
+
+        pluginProxy.addMessageListener("recognition:toggle-encoding", new MessageListener() {
+            @Override
+            public void handleMessage(String s, String s1, Object o) {
+                pluginProxy.getProperties().put("encode", o);
             }
         });
 
@@ -220,7 +214,7 @@ public class Main implements Plugin{
             configuration.setLanguageModelPath("resource:/" + GRAMMAR_PATH);
         }
         try {
-            switch (pluginProxy.getProperties().getString("default-recognizer", "sphinx4")){
+            switch (pluginProxy.getProperties().getString("default-recognizer", "pocketsphinx")){
                 case "sphinx4":
                     recognizer = new PatchedLiveRecognizer(configuration, microphone);
                     break;
@@ -240,7 +234,7 @@ public class Main implements Plugin{
     }
 
     public static void flushRecognizer(){
-        if (instance.recognizer != null) {
+        if (instance != null && instance.recognizer != null) {
             instance.recognizer.free();
             instance.initRecognizer();
         }
@@ -275,8 +269,35 @@ public class Main implements Plugin{
         }
     }
 
+    public static void testing(){
+        Configuration configuration = new Configuration();
+        configuration.setAcousticModelPath("file:\\C:\\DeskChan\\ru4sphinx-DeskChan\\prebuilds\\ru4sphinx-DeskChan\\" + ACOUSTIC_MODEL + "\\");
+        configuration.setDictionaryPath("file:\\C:\\DeskChan\\ru4sphinx-DeskChan\\src\\main\\resources\\dict.dic");
+        configuration.setLanguageModelPath("file:\\C:\\DeskChan\\ru4sphinx-DeskChan\\src\\main\\resources\\lm.lm");
+        try {
+            LiveSpeechRecognizer recognizer = new LiveSpeechRecognizer(configuration);
+            Path path = Paths.get(ACOUSTIC_MODEL).resolve("mllr_matrix");
+            if (path.toFile().exists())
+                recognizer.loadTransform(path.toString(), 1);
+
+            recognizer.startRecognition(true);
+            System.out.println("listening");
+            while (true){
+                System.out.println(convertEncoding(recognizer.getResult().getHypothesis()));
+            }
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+       // createRussianResources(1500);
+    }
+
     public static void main(String[] args) throws Exception {
         new Main().initialize(null);
+        //createRussianResources(600);
+        //G2PConvert convert = new G2PEnglish();
+        //convert.allocate();
+        //System.out.println(convert.convert("paypal"));
+        //testing();
         System.out.println("main is done");
     }
 
@@ -293,8 +314,8 @@ public class Main implements Plugin{
     }
 
     public static void log(Throwable e){
-        pluginProxy.log(e);
-        //e.printStackTrace();
+        //pluginProxy.log(e);
+        e.printStackTrace();
         if (instance.recognizer != null)  instance.recognizer.free();
     }
 
@@ -335,5 +356,13 @@ public class Main implements Plugin{
 
     public static ImprovedMicrophone getMicrophone(){
         return instance.microphone;
+    }
+
+    public static String convertEncoding(String text){
+        try {
+            return new String(text.getBytes("WINDOWS-1251"), Charset.forName("UTF-8"));
+        } catch (Exception e){
+            return text;
+        }
     }
 }

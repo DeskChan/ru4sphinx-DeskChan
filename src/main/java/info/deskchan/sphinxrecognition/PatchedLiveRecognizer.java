@@ -12,6 +12,7 @@ import edu.cmu.sphinx.util.props.PropertySheet;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.charset.Charset;
 import java.util.Locale;
 import java.util.Scanner;
 import java.util.Timer;
@@ -52,6 +53,7 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
     private void recognizerStatusChanged(edu.cmu.sphinx.recognizer.Recognizer.State state){
         switch (state){
             case DEALLOCATED:{
+                System.out.println("hi!");
                 if (recordingState == 0)
                     recognizer.allocate();
             } break;
@@ -125,8 +127,11 @@ public class PatchedLiveRecognizer extends AbstractSpeechRecognizer implements R
         } else {
             System.out.println("waiting");
             result = getResult().getHypothesis();
-            System.out.println("got");
-           // result = new String(result.getBytes(Main.ENCODING), Charset.forName("UTF-8"));
+            System.out.println("received");
+            try {
+                if (Main.getPluginProxy().getProperties().getBoolean("encode", false))
+                    result = Main.convertEncoding(result);
+            } catch (Exception e){}
         }
         cache = null;
         return result;
