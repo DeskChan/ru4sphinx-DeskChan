@@ -105,7 +105,7 @@ public class Adapter {
             } break;
             case WAITING_RECORDING: case RECORDING: {
                 pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-                    put("name", pluginProxy.getString("adaptation"));
+                    put("id", "adaptation");
                     put("action", "update");
                     LinkedList<Object> list = new LinkedList<>();
                     list.add(new HashMap<String, Object>() {{
@@ -123,6 +123,7 @@ public class Adapter {
     private void setTextReceiving(){
         state = State.INPUT_TEXT;
         Map m = new HashMap<String, Object>(){{
+            put("id", "adaptation");
             put("name", pluginProxy.getString("adaptation"));
             put("type", "window");
             put("action", "show");
@@ -171,6 +172,7 @@ public class Adapter {
     private void setRecording() {
         state = State.WAITING_RECORDING;
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
+            put("id", "adaptation");
             put("name", pluginProxy.getString("adaptation"));
             put("type", "window");
             put("action", "set");
@@ -228,7 +230,7 @@ public class Adapter {
     private void setFileSaving(){
         state = State.SAVING_RECORDING;
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-            put("name", pluginProxy.getString("adaptation"));
+            put("id", "adaptation");
             put("type", "window");
             put("action", "update");
             LinkedList<Object> list = new LinkedList<>();
@@ -244,7 +246,7 @@ public class Adapter {
     private void setTraining(){
         state = State.TRAINING;
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-            put("name", pluginProxy.getString("adaptation"));
+            put("id", "adaptation");
             put("type", "window");
             put("action", "set");
             LinkedList<Object> list = new LinkedList<>();
@@ -278,7 +280,7 @@ public class Adapter {
             } break;
         }
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-            put("name", pluginProxy.getString("adaptation"));
+            put("id", "adaptation");
             put("action", "update");
             LinkedList<HashMap<String, Object>> buttons = new LinkedList<>();
             buttons.add(new HashMap<String, Object>() {{
@@ -304,7 +306,7 @@ public class Adapter {
 
     private void closeAdapter(){
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-            put("name", pluginProxy.getString("adaptation"));
+            put("id", "adaptation");
             put("action", "hide");
         }});
     }

@@ -19,6 +19,7 @@ public class DictionaryOptions {
                 DictionaryOptions options = new DictionaryOptions();
                 pluginProxy.getProperties().put("dictionary.length", options.dictionary.size());
                 pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
+                    put("id", "dictionary-settings");
                     put("name", pluginProxy.getString("dictionary.settings"));
                     put("type", "panel");
                     put("action", "show");
@@ -99,7 +100,7 @@ public class DictionaryOptions {
                     instance.nextTranscription();
                 } catch (Exception e){
                     pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-                        put("name", pluginProxy.getString("dictionary.settings"));
+                        put("id", "dictionary-settings");
                         put("action", "update");
                         List<HashMap<String, Object>> list = new LinkedList<>();
                         list.add(new HashMap<String, Object>() {{
@@ -185,7 +186,7 @@ public class DictionaryOptions {
 
         if (single){
             pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-                put("name", pluginProxy.getString("dictionary.settings"));
+                put("id", "dictionary-settings");
                 put("action", "update");
                 List<HashMap<String, Object>> list = new LinkedList<>();
                 list.add(new HashMap<String, Object>() {{
@@ -198,7 +199,7 @@ public class DictionaryOptions {
             transcriptionCounter = (transcriptionCounter+1) % transcriptions.size();
         } else {
             pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-                put("name", pluginProxy.getString("dictionary.settings"));
+                put("id", "dictionary-settings");
                 put("action", "update");
                 List<HashMap<String, Object>> list = new LinkedList<>();
                 list.add(new HashMap<String, Object>() {{
@@ -266,7 +267,7 @@ public class DictionaryOptions {
 
         final String value = pluginProxy.getString(notPresent ? "not-present" : "present");
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
-            put("name", Main.getPluginProxy().getString("dictionary.settings"));
+            put("id", "dictionary-settings");
             put("action", "update");
             List<HashMap<String, Object>> list = new LinkedList<>();
             list.add(new HashMap<String, Object>() {{

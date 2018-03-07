@@ -56,6 +56,7 @@ public class Main implements Plugin{
         pluginProxy.getProperties().load();
 
         pluginProxy.sendMessage("gui:set-panel", new HashMap<String, Object>(){{
+            put("id", "recognition");
             put("name", pluginProxy.getString("recognition"));
             put("type", "tab");
             put("action", "set");

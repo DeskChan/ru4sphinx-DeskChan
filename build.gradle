@@ -31,7 +31,7 @@ task fatJar(type: Jar) {
         def commonAttrs = [
                 'Main-Class': mainClassName,
                 'Type': 'Jar',
-                'Version': '1.2.8',
+                'Version': '1.2.9',
                 'Author': 'DeskChan Project <support@deskchan.info> (http://deskchan.info)',
                 'Resources': "info/deskchan/sphinxrecognition/strings"
         ]
